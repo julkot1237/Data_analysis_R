@@ -1,0 +1,66 @@
+---
+title: "Kolowkium"
+author: "KotJulia"
+date: "2024-06-12"
+output: html_document
+---
+```{r}
+
+
+library(dplyr)
+library(summarytools)
+library(corrplot)
+library(caTools)
+library(GGally)
+library(readxl)
+
+data <- read_excel("C:/Users/MMKrosno/Desktop/Dane/studia/2rok/4sem/modelowanie/apptemp")
+head(data)
+
+#a
+new_data=na.omit(data)
+
+#b
+korelacja <- cor(new_data)
+
+print(korelacja)
+
+#analizując wykres korelacji, a także same wartości liczbowe, stwierdzam, że #mogę pominąć prędkość oraz kierunek wiatru #oraz ciśnienie powietrza
+
+new_data2<- new_data %>% select(-c(`Wind Speed (km/h)`, `Wind Direction (degrees)`, `Pressure (millibars)`))
+
+#c
+set.seed(415422)
+maska <- sample.split(new_data2, SplitRatio = 0.7)
+train_set <- subset(new_data2,maska)
+test_set <- subset(new_data2,!maska)
+
+
+
+
+#d najwyższy współczynnik korelacji między odczuwalną temperaturą #obserwujemy ze zmienną "Temperature (C)"
+
+model = lm(`Apparent Temperature (C)` ~ `Temperature (C)`, data = train_set)
+summary(model)
+
+temp_train=predict(model,newdata=train_set)
+temp_test=predict(model,newdata=test_set)
+RMSE_test=sqrt(mean((temp_test-test_set$`Apparent Temperature (C)`)^2))
+RMSE_train=sqrt(mean((temp_train-train_set$`Apparent Temperature (C)`)^2))
+
+
+#e
+model2 <- lm(`Apparent Temperature (C)` ~ `Temperature (C)` + `Pressure (mbar)` + `Humidity`, data = train_set)
+
+temp_train2 <- predict(model2, newdata = train_set)
+temp_test2 <- predict(model2, newdata = test_set)
+
+RMSE_train2<- mean((train_set$`Apparent Temperature (C)` - temp_train2)^2)
+RMSE_test2 <- mean((test_set$`Apparent Temperature (C)` - temp_test2)^2)
+
+print(RMSE_test2)
+print(RMSE_train2)
+
+```
+
+

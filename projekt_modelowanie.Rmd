@@ -1,0 +1,117 @@
+---
+title: "projekt"
+author: "KotJulia"
+date: "2024-05-27"
+output: html_document
+---
+
+```{r}
+```
+
+
+```{r}
+library(dplyr)
+library(summarytools)
+library(corrplot)
+library(caTools)
+library(GGally)
+
+data<- read.csv2("C:/Users/MM Krosno/Desktop/Dane/studia/2rok/4sem/modelowanie/weather.csv")
+
+str(data)
+summary(data)
+
+korelacja <- cor(data %>% select_if(is.numeric), use = "complete.obs")
+kor_deszcz <- korelacja[, "MEAN.ANNUAL.RAINFALL"]
+kor_deszcz
+
+##wybieramy dane dla których abs(kor_deszcz) jest najniższa i usuwamy je z bazy
+##abs(kor_deszcz)<0.25 dla: RECORD.LENGTH, MEAN.ANNUAL.WIND.SPEED, MEAN.ANNUAL.SUNSHINE, MAX.MONTHLY.WIND.SPEED, MIN.AIR.TEMP, MEAN.RANGE.AIR.TEMP
+
+new_data <- data %>% 
+  select(-id, -PERIOD, -DWD_ID, -STATION.NAME, -FEDERAL.STATE, -RECORD.LENGTH, -MEAN.ANNUAL.WIND.SPEED, -MEAN.ANNUAL.SUNSHINE, -MAX.MONTHLY.WIND.SPEED, -MIN.AIR.TEMP, -MEAN.RANGE.AIR.TEMP)
+
+
+new_data=na.omit(new_data)
+
+dim(new_data)
+
+split <- sample.split(new_data$MEAN.ANNUAL.RAINFALL, SplitRatio = 0.7)
+train_set <- subset(new_data, split == TRUE)
+test_set <- subset(new_data, split == FALSE)
+
+temp_train <- train_set$MEAN.ANNUAL.RAINFALL
+temp_test <- test_set$MEAN.ANNUAL.RAINFALL
+
+obj_train <- subset(train_set, select = -MEAN.ANNUAL.RAINFALL)
+obj_test <- subset(test_set, select = -MEAN.ANNUAL.RAINFALL)
+
+dane <- cbind(response = temp_train, obj_train)
+ggpairs(dane)
+
+cor(dane)
+
+cor_matrix <- cor(dane)
+corrplot(cor_matrix, method = "number", number.cex=0.7, tl.cex=0.7)
+
+mask = abs(cor_matrix["response",]) >= 0.5
+#odrzucenie zmiennych
+result_set = dane[mask]
+
+ggpairs(result_set)
+```
+
+
+```{r}
+#1
+model_bazowy = lm(MEAN.ANNUAL.RAINFALL ~ 1, train_set)
+comp = c(mean(temp_train), as.double(model_bazowy[1]))
+comp
+
+#2
+RMSE=sqrt(mean((model_bazowy$fitted.values - temp_train)^2))
+RMSE
+
+#3
+##zmienna MEAN.ANNUAL.RAINFALL ma nazwę response w tej bazie danych
+result_set=na.omit(result_set)
+train_set_2 <- subset(result_set)
+temp_train_2 <- train_set_2$response
+#temp_train_2 <- data.frame(response = temp_train_2)
+
+temp=predict(model_bazowy,newdata=test_set)
+RMSE_1=sqrt(mean((temp-temp_test)^2))
+RMSE_1
+
+#4
+kor=cor(temp_train_2,obj_train)
+kor
+
+#Najbliżej wartości 0.76 jest zmienna ALTITUDE
+
+temp2=lm(MEAN.ANNUAL.RAINFALL ~ ALTITUDE, data=train_set)
+RMSE_2=sqrt(mean((temp2$fitted.values - temp_train)^2))
+RMSE_2
+
+
+#5
+temp3=predict(temp2,newdata=test_set)
+RMSE_3=sqrt(mean((temp3-temp_test)^2))
+RMSE_3
+
+#6
+temp4=lm(MEAN.ANNUAL.RAINFALL ~ MAX.RAINFALL, data=train_set)
+RMSE_4=sqrt(mean((temp4$fitted.values - temp_train)^2))
+RMSE_4
+
+#7
+temp5=predict(temp4,newdata=test_set)
+RMSE_5=sqrt(mean((temp5-temp_test)^2))
+RMSE_5
+
+#8
+
+
+```
+
+
